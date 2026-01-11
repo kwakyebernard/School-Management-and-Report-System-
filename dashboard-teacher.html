@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Dashboard | School Management System</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f6f9;margin:0;padding:0;}
+.container{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:#2c3e50;color:white;padding:20px;}
+.sidebar h2{text-align:center;margin-bottom:30px;}
+.sidebar button{width:100%;background:none;border:none;color:white;padding:12px;margin-bottom:8px;text-align:left;cursor:pointer;border-radius:6px;font-size:15px;}
+.sidebar button:hover,.sidebar button.active{background: rgba(255,255,255,0.2);}
+.main{flex:1;padding:25px;}
+.card{background:white;padding:20px;border-radius:10px;margin-bottom:20px;}
+.section{display:none;}
+.section.active{display:block;}
+table{width:100%;border-collapse:collapse;margin-top:15px;}
+th,td{padding:8px;border-bottom:1px solid #ddd;text-align:center;}
+th{background:#f0f2f5;}
+input[type="number"]{width:60px;padding:3px;text-align:center;}
+input[type="text"]{width:120px;padding:3px;}
+button.submit-btn{background:#2980b9;color:white;padding:6px 12px;border:none;border-radius:6px;cursor:pointer;}
+button.submit-btn:hover{opacity:0.9;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="sidebar">
+    <h2>Teacher Dashboard</h2>
+    <button class="active" onclick="showSection(this,'enterScores')">Enter Scores</button>
+    <button onclick="showSection(this,'studentReports')">Student Reports</button>
+    <button onclick="showSection(this,'reportCards')">Report Cards</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="main">
+    <!-- Enter Scores Section -->
+    <div id="enterScores" class="section card active">
+      <h3>Enter Scores for 10 Subjects</h3>
+      <p>Add students, their CA and Exam scores for 10 subjects.</p>
+      <button class="submit-btn" onclick="addStudentRow()">Add Student</button>
+      <table id="scoresTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student Name</th>
+            <th>Sub1 (CA/Exam)</th>
+            <th>Sub2 (CA/Exam)</th>
+            <th>Sub3 (CA/Exam)</th>
+            <th>Sub4 (CA/Exam)</th>
+            <th>Sub5 (CA/Exam)</th>
+            <th>Sub6 (CA/Exam)</th>
+            <th>Sub7 (CA/Exam)</th>
+            <th>Sub8 (CA/Exam)</th>
+            <th>Sub9 (CA/Exam)</th>
+            <th>Sub10 (CA/Exam)</th>
+            <th>Total</th>
+            <th>Grade</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="scoresBody">
+          <!-- Rows will be added dynamically -->
+        </tbody>
+      </table>
+      <br>
+      <button class="submit-btn" onclick="saveScores()">Save & Calculate</button>
+    </div>
+
+    <!-- Student Reports Section -->
+    <div id="studentReports" class="section card">
+      <h3>Student Reports</h3>
+      <div id="reportContainer">Scores will appear here after teacher submission.</div>
+    </div>
+
+    <!-- Report Cards Section -->
+    <div id="reportCards" class="section card">
+      <h3>Generate Report Cards</h3>
+      <button class="submit-btn" onclick="generateReportCards()">Generate All PDF (Simulated)</button>
+      <div id="pdfContainer"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Show section
+function showSection(btn,id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".sidebar button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+// Logout
+function logout(){sessionStorage.clear();window.location.href="login.html";}
+
+// Add a new student row
+let studentCount = 0;
+function addStudentRow(){
+  studentCount++;
+  const tbody = document.getElementById('scoresBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${studentCount}</td>
+    <td><input type="text" class="studentName" placeholder="Name"></td>
+    ${Array(10).fill(0).map((_,i)=>`<td><input type="number" min="0" max="100" class="subject${i+1}"></td>`).join('')}
+    <td class="total">0</td>
+    <td class="grade">-</td>
+    <td class="status">-</td>`;
+  tbody.appendChild(tr);
+}
+
+// Save scores, calculate totals, grades, pass/fail, ranking
+function saveScores(){
+  const rows = document.querySelectorAll("#scoresBody tr");
+  let studentsData = [];
+
+  rows.forEach(row=>{
+    const name = row.querySelector(".studentName").value || "Unnamed";
+    let total=0;
+    let subjectScores=[];
+    for(let i=1;i<=10;i++){
+      const val = parseFloat(row.querySelector(`.subject${i}`).value)||0;
+      subjectScores.push(val);
+      total+=val;
+    }
+    let grade='F';
+    if(total>=450) grade='A';
+    else if(total>=400) grade='B';
+    else if(total>=350) grade='C';
+    else if(total>=300) grade='D';
+    else grade='F';
+    const status = total>=300?'Pass':'Fail';
+
+    row.querySelector(".total").textContent = total;
+    row.querySelector(".grade").textContent = grade;
+    row.querySelector(".status").textContent = status;
+
+    studentsData.push({name,total,grade,status,scores:subjectScores});
+  });
+
+  // Sort by total descending to assign positions
+  studentsData.sort((a,b)=>b.total-a.total);
+  studentsData.forEach((s,i)=>s.position=i+1);
+
+  // Save to localStorage for Student Dashboard
+  localStorage.setItem('studentsResults', JSON.stringify(studentsData));
+
+  // Update report section
+  const reportContainer = document.getElementById("reportContainer");
+  reportContainer.innerHTML = "<h4>Updated Student Reports:</h4><ul>"+studentsData.map(s=>`<li>${s.position}. ${s.name} - Total: ${s.total}, Grade: ${s.grade}, Status: ${s.status}</li>`).join('')+"</ul>";
+  alert("Scores saved and positions updated!");
+}
+
+// Generate PDF (Simulated)
+function generateReportCards(){
+  const studentsData = JSON.parse(localStorage.getItem('studentsResults')||'[]');
+  const container = document.getElementById("pdfContainer");
+  container.innerHTML = "";
+  studentsData.forEach(s=>{
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.marginBottom='10px';
+    div.innerHTML = `<h4>Report Card - ${s.name}</h4>
+      <p>Total: ${s.total}</p>
+      <p>Grade: ${s.grade}</p>
+      <p>Status: ${s.status}</p>
+      <p>Position: ${s.position}</p>
+      <p>Subjects: ${s.scores.join(', ')}</p>`;
+    container.appendChild(div);
+  });
+  alert("Report Cards generated (simulated). You can integrate jsPDF for real PDFs.");
+}
+
+// Initialize first section
+document.querySelector(".sidebar button").onclick();
+</script>
+</body>
+</html>
