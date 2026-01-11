@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accountant Dashboard | School Management</title>
+<style>
+/* Reset */
+* { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
+
+/* Layout */
+body { display:flex; min-height:100vh; background:#f4f6f9; }
+.sidebar { width:0; background:#27ae60; color:white; overflow-x:hidden; transition:0.4s; position:fixed; height:100%; z-index:100; }
+.sidebar.active { width:220px; }
+.sidebar h2 { text-align:center; margin:20px 0; }
+.sidebar button { width:100%; background:none; border:none; color:white; padding:12px 20px; text-align:left; font-size:16px; cursor:pointer; border-radius:6px; margin-bottom:6px; }
+.sidebar button:hover, .sidebar button.active { background: rgba(255,255,255,0.2); }
+.main { flex:1; margin-left:0; transition:0.4s; padding:20px; }
+.main.shifted { margin-left:220px; }
+
+/* Cards & Sections */
+.card { background:white; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+.section { display:none; }
+.section.active { display:block; }
+
+/* Tables */
+table { width:100%; border-collapse: collapse; margin-top:15px; }
+th, td { padding:8px; border-bottom:1px solid #ddd; text-align:center; }
+th { background:#f0f2f5; }
+
+/* Buttons */
+button.submit-btn { background:#27ae60; color:white; padding:6px 12px; border:none; border-radius:6px; cursor:pointer; margin-top:10px; }
+button.submit-btn:hover { opacity:0.9; }
+
+/* Topbar */
+.topbar { width:100%; height:50px; background:white; display:flex; align-items:center; padding:0 20px; box-shadow:0 2px 5px rgba(0,0,0,0.1); position:fixed; z-index:90; }
+.menu-toggle { font-size:24px; cursor:pointer; margin-right:20px; }
+.topbar h1 { font-size:20px; }
+
+/* Responsive */
+@media(max-width:768px){ .sidebar.active{width:180px;} .main.shifted{margin-left:180px;} }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <h2>Accountant Dashboard</h2>
+  <button class="active" onclick="openSection(this,'billing')">Student Billing</button>
+  <button onclick="openSection(this,'fee-structure')">Fee Structure</button>
+  <button onclick="openSection(this,'payments')">Payments</button>
+  <button onclick="openSection(this,'outstanding')">Outstanding Balances</button>
+  <button onclick="openSection(this,'receipts')">Receipts</button>
+  <button onclick="openSection(this,'reports')">Reports</button>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<!-- Main Content -->
+<div class="main" id="main">
+  <div class="topbar">
+    <span class="menu-toggle" onclick="toggleSidebar()">&#9776;</span>
+    <h1>School Management System</h1>
+  </div>
+
+  <div style="margin-top:60px;">
+    <!-- Student Billing -->
+    <div id="billing" class="section card active">
+      <h3>Student Billing</h3>
+      <table id="billing-table">
+        <thead>
+          <tr><th>Student ID</th><th>Name</th><th>Class</th><th>Total Fees</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>STD001</td>
+            <td>John Doe</td>
+            <td>JHS1</td>
+            <td>GH₵ 5,000</td>
+            <td><button class="submit-btn" onclick="payFee('STD001')">Pay</button></td>
+          </tr>
+          <tr>
+            <td>STD002</td>
+            <td>Jane Smith</td>
+            <td>JHS1</td>
+            <td>GH₵ 5,000</td>
+            <td><button class="submit-btn" onclick="payFee('STD002')">Pay</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Fee Structure -->
+    <div id="fee-structure" class="section card">
+      <h3>Fee Structure Setup</h3>
+      <form onsubmit="updateFeeStructure(event)">
+        <label>Default Fee Amount: GH₵ </label>
+        <input type="number" id="defaultFee" value="5000" min="0" required>
+        <button class="submit-btn" type="submit">Update Fee</button>
+      </form>
+    </div>
+
+    <!-- Payments -->
+    <div id="payments" class="section card">
+      <h3>Payment Records</h3>
+      <table id="payments-table">
+        <thead><tr><th>Student ID</th><th>Name</th><th>Amount Paid</th><th>Date</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Outstanding Balances -->
+    <div id="outstanding" class="section card">
+      <h3>Outstanding Balances</h3>
+      <table id="outstanding-table">
+        <thead><tr><th>Student ID</th><th>Name</th><th>Outstanding</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Receipts -->
+    <div id="receipts" class="section card">
+      <h3>Receipts</h3>
+      <table id="receipts-table">
+        <thead><tr><th>Date</th><th>Student</th><th>Amount</th><th>Receipt #</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button class="submit-btn" onclick="alert('Generate Printable Receipt')">Print Receipt</button>
+    </div>
+
+    <!-- Reports -->
+    <div id="reports" class="section card">
+      <h3>Financial Reports</h3>
+      <button class="submit-btn" onclick="generateReport()">Generate Monthly Report</button>
+      <div id="report-output" style="margin-top:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Sidebar toggle */
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('active');
+  document.getElementById('main').classList.toggle('shifted');
+}
+
+/* Section Navigation */
+function openSection(btn,id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".sidebar button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+/* Logout */
+function logout(){
+  sessionStorage.clear();
+  alert('Logged out!');
+  window.location.href="login.html";
+}
+
+/* Fee Structure Update */
+function updateFeeStructure(e){
+  e.preventDefault();
+  const fee = document.getElementById('defaultFee').value;
+  alert('Fee structure updated to GH₵ '+fee);
+}
+
+/* Payment simulation */
+let payments = [];
+function payFee(studentId){
+  let studentName = studentId=="STD001"?"John Doe":"Jane Smith";
+  let amount = document.getElementById('defaultFee')?document.getElementById('defaultFee').value:5000;
+  let date = new Date().toISOString().split('T')[0];
+  let receiptNo = 'R'+(payments.length+1).toString().padStart(3,'0');
+  payments.push({studentId, studentName, amount, date, receiptNo});
+  updatePaymentsTable();
+  alert('Payment of GH₵ '+amount+' recorded for '+studentName);
+}
+
+/* Update Payments Table */
+function updatePaymentsTable(){
+  const tbody = document.querySelector('#payments-table tbody');
+  tbody.innerHTML='';
+  payments.forEach(p=>{
+    let row = `<tr><td>${p.studentId}</td><td>${p.studentName}</td><td>GH₵ ${p.amount}</td><td>${p.date}</td></tr>`;
+    tbody.innerHTML += row;
+  });
+
+  // Update receipts table
+  const rbody = document.querySelector('#receipts-table tbody');
+  rbody.innerHTML='';
+  payments.forEach(p=>{
+    rbody.innerHTML+= `<tr><td>${p.date}</td><td>${p.studentName}</td><td>GH₵ ${p.amount}</td><td>${p.receiptNo}</td></tr>`;
+  });
+
+  // Update Outstanding
+  const obody = document.querySelector('#outstanding-table tbody');
+  obody.innerHTML='';
+  let students = [{id:'STD001',name:'John Doe'},{id:'STD002',name:'Jane Smith'}];
+  students.forEach(s=>{
+    let totalPaid = payments.filter(p=>p.studentId==s.id).reduce((acc,p)=>acc+Number(p.amount),0);
+    let outstanding = 5000 - totalPaid;
+    obody.innerHTML+= `<tr><td>${s.id}</td><td>${s.name}</td><td>GH₵ ${outstanding}</td></tr>`;
+  });
+}
+
+/* Financial Report */
+function generateReport(){
+  let totalCollected = payments.reduce((acc,p)=>acc+Number(p.amount),0);
+  let report = `Total Payments Collected: GH₵ ${totalCollected}<br>Total Students Paid: ${payments.length}`;
+  document.getElementById('report-output').innerHTML = report;
+}
+</script>
+
+</body>
+</html>
